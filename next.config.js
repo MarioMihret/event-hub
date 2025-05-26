@@ -146,6 +146,28 @@ const nextConfig = {
   },
   
   // Other configurations can be added here
+
+  async headers() {
+    // IMPORTANT: Replace 'YOUR_JAAS_APP_ID.8x8.vc' with your actual JaaS domain
+    // For example, if your JAAS_APP_ID is 'my-app-123', the domain is 'my-app-123.8x8.vc'
+    const jaasDomain = process.env.NEXT_PUBLIC_JAAS_APP_ID ? `${process.env.NEXT_PUBLIC_JAAS_APP_ID}.8x8.vc` : 'YOUR_JAAS_APP_ID.8x8.vc';
+    
+    return [
+      {
+        source: '/:path*', // Apply this header to all routes
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            // Allow camera and microphone for your JaaS domain and all origins (Jitsi might need broader permissions for its internal iframes)
+            // It's generally recommended to be as specific as possible with origins.
+            // If 'self' is your application's domain, and Jitsi is on 'jaasDomain', you'd typically list them.
+            // Using '*' for Jitsi sub-iframes might be necessary if their exact origins are dynamic or numerous.
+            value: `camera=(${jaasDomain} *), microphone=(${jaasDomain} *)`,
+          },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
