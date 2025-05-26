@@ -16,14 +16,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Optional: Check if user account is active, if relevant for submitting applications
-  // if (session.user.isActive === false) {
-  //   return NextResponse.json(
-  //     { success: false, error: "Unauthorized: Account is not active. Cannot submit application." },
-  //     { status: 403 }
-  //   );
-  // }
-
   const userId = session.user.id;
   const userEmail = session.user.email; // Use this as the authoritative email
 
