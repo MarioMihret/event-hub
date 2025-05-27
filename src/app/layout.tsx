@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import { Providers } from './providers';
 import Navbar from '@/components/Navbar/page';
 import Footer from '@/components/Footer/page';
@@ -45,23 +46,20 @@ export default function RootLayout({
             </main>
             <Footer />
           </Providers>
-          {/* 
-          <script
-            type="text/javascript"
-            dangerouslySetInnerHTML={{
-              __html: `
-                var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-                (function(){
-                var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-                s1.async=true;
-                s1.src='https://embed.tawk.to/682e49ee8ec535190f1216aa/1irqd1j70';
-                s1.charset='UTF-8';
-                s1.setAttribute('crossorigin','*');
-                s0.parentNode.insertBefore(s1,s0);
-                })();
-              `
-            }}
-          />  */}
+        
+          <Script id="tawkto-script" strategy="afterInteractive">
+            {`
+              var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+              (function(){
+              var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+              s1.async=true;
+              s1.src='https://embed.tawk.to/682e49ee8ec535190f1216aa/1irqd1j70';
+              s1.charset='UTF-8';
+              s1.setAttribute('crossorigin','*');
+              s0.parentNode.insertBefore(s1,s0);
+              })();
+            `}
+          </Script>  
       </body>
     </html>
   );
