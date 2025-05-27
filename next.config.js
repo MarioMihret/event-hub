@@ -150,7 +150,7 @@ const nextConfig = {
   async headers() {
     // IMPORTANT: Replace 'YOUR_JAAS_APP_ID.8x8.vc' with your actual JaaS domain
     // For example, if your JAAS_APP_ID is 'my-app-123', the domain is 'my-app-123.8x8.vc'
-    const jaasDomain = process.env.NEXT_PUBLIC_JAAS_APP_ID ? `${process.env.NEXT_PUBLIC_JAAS_APP_ID}.8x8.vc` : 'YOUR_JAAS_APP_ID.8x8.vc';
+    const jaasDomain = process.env.NEXT_PUBLIC_JAAS_APP_ID ? `${process.env.NEXT_PUBLIC_JAAS_APP_ID}.8x8.vc` : 'vpaas-magic-cookie-255e4616d2394cf490433fd3dab3dff3.8x8.vc';
     
     return [
       {

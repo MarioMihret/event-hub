@@ -55,6 +55,16 @@ export default function MeetingClientPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Attempt to correct malformed URL from payment redirects
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('&amp;')) {
+      const correctedSearch = window.location.search.replace(/&amp;/g, '&');
+      const correctedUrl = window.location.pathname + correctedSearch + window.location.hash;
+      console.warn('Malformed URL detected (contains &amp;). Attempting client-side redirect to:', correctedUrl);
+      router.replace(correctedUrl); // Use replace to avoid adding the bad URL to history
+    }
+  }, [router]); // Run once on mount
+
   const [meetingDetails, setMeetingDetails] = useState<MeetingPageDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -145,14 +155,14 @@ export default function MeetingClientPage() {
         return;
       }
 
-      if (!urlOrderId) {
-        setFetchError("Order ID is missing from the URL. Please ensure you have a valid meeting link.");
-        setIsLoading(false);
-        return;
-      }
+      // If orderId is missing, we still proceed. The API will check if it's an organizer.
+      // The error "Order ID is missing..." will now be handled by the API if access is denied.
+      // if (!urlOrderId) {
+      //   setFetchError("Order ID is missing from the URL. Please ensure you have a valid meeting link.");
+      //   setIsLoading(false);
+      //   return;
+      // }
 
-      // Check for the mock event ID pattern from the development data
-      // Reject mock IDs but allow our real event IDs
       if (urlEventId === 'mockEvent123') {
         setFetchError("This is a mock event ID used for development and cannot access the meeting page. Please use a real event.");
         setIsLoading(false);
@@ -164,7 +174,6 @@ export default function MeetingClientPage() {
       }
       setFetchError(null);
 
-      // Show success message for users coming from payment flow
       if (source === 'payment_success') {
         const toastId = 'payment-success';
         const toastAlreadyShown = sessionStorage.getItem(toastId) === 'shown';
@@ -174,7 +183,6 @@ export default function MeetingClientPage() {
             id: toastId, 
             duration: 5000 
           });
-          // Mark this toast as shown for this session
           sessionStorage.setItem(toastId, 'shown');
         }
       }
@@ -184,18 +192,25 @@ export default function MeetingClientPage() {
           const cachedData = localStorage.getItem(localStorageKey);
           if (cachedData) {
             const parsedData = JSON.parse(cachedData) as MeetingPageDetails;
-            if (parsedData.eventId === urlEventId && parsedData.orderId === urlOrderId) {
+            // Ensure cached data matches current eventId and potentially orderId (if present)
+            if (parsedData.eventId === urlEventId && (urlOrderId ? parsedData.orderId === urlOrderId : true) ) {
               setMeetingDetails(parsedData);
             }
           }
         } catch (e) {
           console.warn("Failed to parse meeting details from localStorage", e);
-          localStorage.removeItem(localStorageKey); 
+          if (localStorageKey) localStorage.removeItem(localStorageKey); 
         }
       }
       
       try {
-        const response = await fetch(`/api/orders/verify-and-fetch-event-details?eventId=${encodeURIComponent(urlEventId)}&orderId=${encodeURIComponent(urlOrderId)}`);
+        // Construct API URL: include orderId only if it exists
+        let apiUrl = `/api/orders/verify-and-fetch-event-details?eventId=${encodeURIComponent(urlEventId)}`;
+        if (urlOrderId) {
+          apiUrl += `&orderId=${encodeURIComponent(urlOrderId)}`;
+        }
+
+        const response = await fetch(apiUrl);
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ message: `API request failed with status ${response.status}` }));
@@ -205,9 +220,15 @@ export default function MeetingClientPage() {
         const data = await response.json() as MeetingPageDetails;
 
         setMeetingDetails(data);
-        if (localStorageKey) {
-          localStorage.setItem(localStorageKey, JSON.stringify(data));
-        }
+        // Update localStorageKey to only use eventId if orderId was not used for the fetch,
+        // or adjust caching strategy for organizers if needed.
+        // For now, use original localStorageKey which depends on both.
+        // If data.orderId is null (organizer view), we might want a different cache key or not cache.
+        const currentCacheKey = urlOrderId 
+            ? `${LOCAL_STORAGE_KEY_PREFIX}${urlEventId}_${urlOrderId}` 
+            : `${LOCAL_STORAGE_KEY_PREFIX}${urlEventId}_organizer`;
+
+        localStorage.setItem(currentCacheKey, JSON.stringify(data));
         setFetchError(null);
       } catch (error: any) {
         console.error("Error fetching meeting details from API:", error);

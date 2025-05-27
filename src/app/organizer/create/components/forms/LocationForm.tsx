@@ -66,22 +66,15 @@ const LocationForm: React.FC<LocationFormProps> = ({
         setStreamingPlatform('JITSI');
       }
       if (streamingPlatform === 'JITSI') {
-        const eventId = event?._id || event?.id; // Get eventId
+        const eventId = event?._id || event?.id;
 
-        if (!roomName && eventId) { // Only generate if roomName is not set and eventId exists
-          const newTimestamp = Date.now(); // Generate timestamp once
-          // It's assumed that 'roomName' in the parent state will store this value persistently for the event.
-          // If this form is for a *new* event, eventId might be undefined.
-          // In that case, the room name might need to be updated post-save.
-          // For now, we require eventId to generate the preferred format.
+        if (!roomName && eventId) {
+          const newTimestamp = Date.now();
           const currentSlug = generateJitsiRoomName(eventId, newTimestamp)
-            .trim().toLowerCase(); // Normalize here too
+            .trim().toLowerCase();
           setRoomName(currentSlug);
-          // Storing the timestamp with the event or alongside roomName in DB would be ideal
-          // to ensure the same room is used if re-generating. Here, we rely on setRoomName saving it.
           console.log(`Generated JaaS room slug with eventId ${eventId} and timestamp ${newTimestamp}: ${currentSlug}`);
           
-          // Also update the meetingLink which is derived from roomName
           const jaasAppId = process.env.NEXT_PUBLIC_JAAS_APP_ID;
           if (jaasAppId) {
             const fullJaaSUrl = createJaaSMeetingUrl(jaasAppId, currentSlug);
@@ -92,50 +85,38 @@ const LocationForm: React.FC<LocationFormProps> = ({
           }
 
         } else if (!roomName && !eventId) {
-          // Event ID is not yet available (e.g. creating a new event)
-          const tempSlug = 'temp-room-pending-save'; // Temporary valid slug
+          const tempSlug = 'temp-room-pending-save';
           setRoomName(tempSlug);
-          setMeetingLink(''); // Clear or set temporary meeting link
+          setMeetingLink('');
           console.warn("Generated temporary JaaS room slug as eventId is not available:", tempSlug);
           toast("Jitsi room name will be finalized after the event is saved and has a proper ID.");
         } else if (roomName) {
-          // Room name already exists, ensure meetingLink is also up-to-date if AppID is available
-          // This handles cases where roomName might be set, but meetingLink wasn't (e.g. AppID loaded late)
           const jaasAppId = process.env.NEXT_PUBLIC_JAAS_APP_ID;
-          if (jaasAppId && (!meetingLink || !meetingLink.includes(roomName))) {
+          if (jaasAppId && (!meetingLink || !meetingLink.includes(roomName) || !meetingLink.includes('8x8.vc'))) {
             const fullJaaSUrl = createJaaSMeetingUrl(jaasAppId, roomName);
             setMeetingLink(fullJaaSUrl);
             console.log("Updated JaaS meetingLink for existing roomName:", fullJaaSUrl);
           } else if (!jaasAppId && streamingPlatform === 'JITSI') {
-            // Clear meeting link if App ID becomes unavailable but was JITSI
-            // setMeetingLink(''); // uncomment if this behavior is desired
             toast.error('JaaS App ID is not configured. Cannot update Jitsi meeting link.');
           }
         }
         
+      } else if (streamingPlatform === 'MEETJS') {
+        // For self-hosted Jitsi, we expect the user to input the full link.
+        // We might clear roomName if it was JaaS-generated, or keep it if the user might switch back.
+        // For now, let's ensure roomName is cleared if it looks like a JaaS slug and isn't a custom input.
+        if (roomName && (roomName === 'temp-room-pending-save' || (event?._id && roomName.startsWith(event._id.substring(0, 8))))) {
+          // setRoomName(''); // Optional: clear if it was auto-generated for JaaS
+        }
+        // The meetingLink will be user-provided.
       } else {
-        // If platform is not JITSI, clear Jitsi specific fields if they were auto-generated for Jitsi
-        // Consider if clearing is always desired or if user might switch back and forth.
-        // For now, we only clear if the meetingLink looks like a JaaS link.
         if (meetingLink && meetingLink.includes('8x8.vc')) {
-            // setRoomName(''); // Optionally clear roomName if user switches from Jitsi
-            // setMeetingLink(''); 
-            console.log("Switched from Jitsi, clearing JaaS specific fields (roomName/meetingLink can be cleared if desired).");
+            console.log("Switched from Jitsi (JaaS), JaaS specific fields (roomName/meetingLink can be cleared if desired).");
         }
       }
     } else {
-      // If not virtual, clear virtual-specific fields.
-      // Similar consideration: clear if desired.
-      // if (streamingPlatform === 'JITSI') { // Only clear if it was Jitsi
-      //   setRoomName('');
-      //   setMeetingLink('');
-      //   setStreamingPlatform('');
-      // }
       console.log("Event is not virtual. Virtual-specific fields can be cleared if desired.");
     }
-  // Dependencies: include `event` to react to changes in event._id/event.id for new events.
-  // `meetingLink` removed from dependencies as it was causing potential re-runs when it itself was being set.
-  // The logic inside now handles meetingLink updates based on roomName and jaasAppId.
   }, [isVirtual, streamingPlatform, setStreamingPlatform, roomName, setRoomName, setMeetingLink, event]);
 
   // Handle Test Meeting button click
@@ -143,9 +124,21 @@ const LocationForm: React.FC<LocationFormProps> = ({
     if (streamingPlatform === 'JITSI' && roomName && process.env.NEXT_PUBLIC_JAAS_APP_ID) {
       setShowJitsiMeeting(true); 
     } else if (streamingPlatform === 'JITSI' && !process.env.NEXT_PUBLIC_JAAS_APP_ID) {
-      toast.error("JaaS App ID is not configured. Cannot test meeting.");
+      toast.error("JaaS App ID is not configured. Cannot test JaaS meeting.");
+    } else if (streamingPlatform === 'MEETJS') {
+      if (meetingLink && meetingLink.startsWith('http')) {
+        window.open(meetingLink, '_blank', 'noopener,noreferrer');
+      } else {
+        toast.error("Please enter a valid meeting URL for Self-Hosted Jitsi Meet (e.g., https://meet.example.com/YourRoom).");
+      }
+    } else if (streamingPlatform === 'CUSTOM' || streamingPlatform === 'ZOOM' || streamingPlatform === 'TEAMS' || streamingPlatform === 'MEET') {
+        if (meetingLink && meetingLink.startsWith('http')) {
+            window.open(meetingLink, '_blank', 'noopener,noreferrer');
+        } else {
+            toast.error("Please enter a valid meeting URL for the selected platform.");
+        }
     } else {
-       toast.error("Please select Jitsi as platform and ensure room name is generated.");
+       toast.error("Please select a platform and ensure a valid meeting link is provided.");
     }
   };
 
@@ -211,6 +204,7 @@ const LocationForm: React.FC<LocationFormProps> = ({
               >
                 <option value="">Select platform</option>
                 <option value="JITSI">Jitsi Meet (via JaaS)</option>
+                <option value="MEETJS">Jitsi Meet (Self-Hosted)</option>
                 <option value="ZOOM">Zoom</option>
                 <option value="TEAMS">Microsoft Teams</option>
                 <option value="MEET">Google Meet</option>
@@ -243,30 +237,41 @@ const LocationForm: React.FC<LocationFormProps> = ({
                   </div>
                    <p className="text-xs text-gray-400 mt-1">
                        Full meeting URL (using JaaS App ID: <span className="font-mono text-xs">{process.env.NEXT_PUBLIC_JAAS_APP_ID ? process.env.NEXT_PUBLIC_JAAS_APP_ID.substring(0,15)+"..." : "Not Configured"}</span> and slug <span className="font-mono text-xs">{roomName}</span>) will be: <br/>
-                       <span className="font-mono text-xs break-all">{meetingLink || "(Will be generated)"}</span>
+                       <span className="font-mono text-xs break-all">{meetingLink || "(Will be generated for JaaS)"}</span>
                    </p>
                    {!process.env.NEXT_PUBLIC_JAAS_APP_ID && <p className="text-xs text-red-500 mt-1">Error: NEXT_PUBLIC_JAAS_APP_ID is not set in environment variables. JaaS link cannot be generated.</p>}
               </div>
             )}
 
-            {/* Show meeting link input only if platform is NOT JITSI and isVirtual */}
-            {isVirtual && streamingPlatform && streamingPlatform !== 'JITSI' && (
-                <div className="md:col-span-2">
-                    <label className="block text-gray-300 mb-2">
-                      Meeting Link for {streamingPlatform} <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        name="meetingLink"
-                        type="url"
-                        value={meetingLink || ''} // Ensure controlled component
-                        onChange={(e) => setMeetingLink(e.target.value)}
-                        onBlur={() => validateFieldOnBlur('meetingLink')}
-                        className={`w-full bg-gray-700 border ${ (fieldsTouched?.meetingLink && formErrors.meetingLink) ? 'border-red-500' : 'border-gray-600' } rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none`}
-                        placeholder={`Enter ${streamingPlatform} meeting URL`}
-                        required={true}
-                    />
-                    {(fieldsTouched?.meetingLink && formErrors.meetingLink) && <p className="mt-1 text-sm text-red-500">{formErrors.meetingLink}</p>}
-                </div>
+            {(streamingPlatform === 'CUSTOM' || streamingPlatform === 'ZOOM' || streamingPlatform === 'TEAMS' || streamingPlatform === 'MEET' || streamingPlatform === 'MEETJS') && (
+              <div className="md:col-span-2">
+                <label htmlFor="meetingLink" className="block text-gray-300 mb-2">
+                  {streamingPlatform === 'MEETJS' ? 'Jitsi Meet URL (Self-Hosted)' : 
+                   streamingPlatform === 'CUSTOM' ? 'Custom Meeting Link' : 
+                   `${streamingPlatform.charAt(0).toUpperCase() + streamingPlatform.slice(1).toLowerCase()} Meeting Link`} * 
+                </label>
+                <input
+                  id="meetingLink"
+                  name="meetingLink"
+                  type="url"
+                  value={meetingLink || ''}
+                  onChange={(e) => setMeetingLink(e.target.value)}
+                  onBlur={() => validateFieldOnBlur('meetingLink')}
+                  placeholder={streamingPlatform === 'MEETJS' ? 'e.g., https://meet.example.com/YourRoomName' : 'e.g., https://zoom.us/j/12345'}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none"
+                />
+                {fieldsTouched.meetingLink && formErrors.meetingLink && <p className="mt-1 text-sm text-red-500">{formErrors.meetingLink}</p>}
+                <button
+                    type="button"
+                    onClick={handleTestMeeting}
+                    disabled={!meetingLink || !meetingLink.startsWith('http')}
+                    className="mt-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={!meetingLink ? "Please enter a meeting link" : "Test Meeting Link"}
+                >
+                    <Link className="w-4 h-4" />
+                    Test Link
+                </button>
+              </div>
             )}
           </>
         ) : (

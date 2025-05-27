@@ -391,7 +391,8 @@ export async function PUT(
     const userId = authenticatedUser.id; 
 
     // Get the existing event to check ownership and check if expired
-    const existingEvent = await eventService.getEventById(id);
+    // Pass userId to eventService.getEventById for proper authorization checks within the service
+    const existingEvent = await eventService.getEventById(id, undefined, false, userId);
     if (!existingEvent) {
       return NextResponse.json(
         { 

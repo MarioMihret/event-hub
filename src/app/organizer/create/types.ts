@@ -10,7 +10,7 @@ export interface RestrictedTo {
 
 // Visibility-related types
 export type VisibilityStatus = 'public' | 'private';
-export type StreamingPlatformType = 'JITSI' | 'ZOOM' | 'TEAMS' | 'MEET' | 'CUSTOM' | '';
+export type StreamingPlatformType = 'JITSI' | 'MEETJS' | 'ZOOM' | 'TEAMS' | 'MEET' | 'CUSTOM' | '';
 
 // Add FormStep type definition
 export type FormStep = 'basic' | 'details' | 'location' | 'tickets' | 'images' | 'speakers' | 'review';

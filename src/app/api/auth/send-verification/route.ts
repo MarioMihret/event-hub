@@ -86,12 +86,12 @@ export async function POST(req: NextRequest) {
       const user = await db.collection('user').findOne({ email });
 
       if (!user) {
-        // User not found, return a generic success message for security
+        // User not found, return a 404 error
         console.log(`Password reset requested for non-existent email: ${email}`);
-        return NextResponse.json({
-          success: true,
-          message: 'If an account with that email exists, a verification code has been sent.'
-        });
+        return NextResponse.json(
+          { error: 'User with this email does not exist.' },
+          { status: 404 }
+        );
       }
     }
 

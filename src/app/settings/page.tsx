@@ -23,11 +23,6 @@ export default function SettingsPage() {
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
   const [email, setEmail] = useState('');
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    eventReminders: true,
-    marketingEmails: false,
-  });
 
   // Image states
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -44,7 +39,6 @@ export default function SettingsPage() {
   const [deletingAccount, setDeletingAccount] = useState(false);
 
   const accountRef = useRef(null);
-  const notificationsRef = useRef(null);
   const securityRef = useRef(null);
   const [state, copyToClipboard] = useCopyToClipboard();
   const [copied, setCopied] = useState(false);
@@ -57,13 +51,10 @@ export default function SettingsPage() {
         if (e.key === '1') {
           setActiveTab('account');
           accountRef.current?.focus();
-        } else if (e.key === '2') {
-          setActiveTab('notifications');
-          notificationsRef.current?.focus();
         } else if (e.key === '3') {
           setActiveTab('security');
           securityRef.current?.focus();
-        } else if (e.key === 's' && (activeTab === 'account' || activeTab === 'notifications')) {
+        } else if (e.key === 's' && activeTab === 'account') {
           e.preventDefault();
           handleSave();
         }
@@ -110,10 +101,6 @@ export default function SettingsPage() {
       setName(data.user.name || '');
       setBio(data.user.bio || '');
       setEmail(data.user.email || '');
-      
-      if (data.user.notificationSettings) {
-        setNotificationSettings(data.user.notificationSettings);
-      }
       
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -193,7 +180,6 @@ export default function SettingsPage() {
       const updateData = {
         name,
         bio,
-        notificationSettings,
         ...(uploadedImageUrl ? { image: uploadedImageUrl } : {})
       };
       
@@ -428,25 +414,6 @@ export default function SettingsPage() {
                 </button>
                 
                 <button
-                  ref={notificationsRef}
-                  onClick={() => setActiveTab('notifications')}
-                  className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                    activeTab === 'notifications' 
-                      ? 'bg-[#2D1D3A] text-[#b967ff] shadow-lg shadow-[#b967ff]/10' 
-                      : 'text-gray-300 hover:bg-[#1A0D25] hover:text-white'
-                  }`}
-                  aria-label="Notification settings tab"
-                  aria-selected={activeTab === 'notifications'}
-                  aria-controls="notifications-panel"
-                >
-                  <div className="flex items-center">
-                    <Bell size={18} className="mr-3" />
-                    Notifications <span className="ml-2 text-xs opacity-60">(Alt+2)</span>
-                  </div>
-                  <ChevronRight size={16} className={`transform transition-transform ${activeTab === 'notifications' ? 'text-[#b967ff] rotate-90' : 'text-gray-500'}`} />
-                </button>
-                
-                <button
                   ref={securityRef}
                   onClick={() => setActiveTab('security')}
                   className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-all ${
@@ -460,7 +427,7 @@ export default function SettingsPage() {
                 >
                   <div className="flex items-center">
                     <Shield size={18} className="mr-3" />
-                    Security <span className="ml-2 text-xs opacity-60">(Alt+3)</span>
+                    Security <span className="ml-2 text-xs opacity-60">(Alt+2)</span>
                   </div>
                   <ChevronRight size={16} className={`transform transition-transform ${activeTab === 'security' ? 'text-[#b967ff] rotate-90' : 'text-gray-500'}`} />
                 </button>
@@ -659,103 +626,6 @@ export default function SettingsPage() {
                           </>
                         )}
                       </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-                
-                {/* Notification Settings */}
-                {activeTab === 'notifications' && (
-                  <motion.div
-                    key="notifications"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                    id="notifications-panel"
-                    role="tabpanel"
-                    aria-labelledby="notifications-tab"
-                  >
-                    <h3 className="text-xl font-medium mb-6 text-white border-b border-[#b967ff]/20 pb-2">Notification Preferences</h3>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-[#1A0D25] rounded-lg hover:bg-[#1c0f29] transition-colors">
-                        <div>
-                          <h4 className="font-medium text-white">Email Notifications</h4>
-                          <p className="text-sm text-gray-400">Receive updates via email</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={notificationSettings.emailNotifications}
-                            onChange={() => setNotificationSettings({
-                              ...notificationSettings,
-                              emailNotifications: !notificationSettings.emailNotifications
-                            })}
-                          />
-                          <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-[#b967ff] peer-focus:ring-2 peer-focus:ring-[#b967ff]/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        </label>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-4 bg-[#1A0D25] rounded-lg hover:bg-[#1c0f29] transition-colors">
-                        <div>
-                          <h4 className="font-medium text-white">Event Reminders</h4>
-                          <p className="text-sm text-gray-400">Get notified before your events</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={notificationSettings.eventReminders}
-                            onChange={() => setNotificationSettings({
-                              ...notificationSettings,
-                              eventReminders: !notificationSettings.eventReminders
-                            })}
-                          />
-                          <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-[#b967ff] peer-focus:ring-2 peer-focus:ring-[#b967ff]/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        </label>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-4 bg-[#1A0D25] rounded-lg hover:bg-[#1c0f29] transition-colors">
-                        <div>
-                          <h4 className="font-medium text-white">Marketing Emails</h4>
-                          <p className="text-sm text-gray-400">Receive promotional content</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={notificationSettings.marketingEmails}
-                            onChange={() => setNotificationSettings({
-                              ...notificationSettings,
-                              marketingEmails: !notificationSettings.marketingEmails
-                            })}
-                          />
-                          <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:bg-[#b967ff] peer-focus:ring-2 peer-focus:ring-[#b967ff]/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        </label>
-                      </div>
-                      
-                      <div className="pt-6">
-                        <motion.button
-                          onClick={handleSave}
-                          disabled={saving}
-                          className="w-full flex justify-center items-center gap-2 bg-[#b967ff] hover:bg-[#a34de7] text-white py-3 px-6 rounded-lg font-medium shadow-lg shadow-[#b967ff]/20 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          {saving ? (
-                            <>
-                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Saving Changes...
-                            </>
-                          ) : (
-                            <>
-                              <Save size={18} />
-                              Save Preferences
-                            </>
-                          )}
-                        </motion.button>
-                      </div>
                     </div>
                   </motion.div>
                 )}
